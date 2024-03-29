@@ -15,4 +15,14 @@ app.use(express.static("public"))
 app.use(cookieParser()); //for handling cookies.
 
 
+//import routes
+import userRoutes from '../src/routes/user.route.js';
+
+
+
+//routes declaration
+app.use("/api/v1/users", userRoutes);
+
+
+
 export { app }
