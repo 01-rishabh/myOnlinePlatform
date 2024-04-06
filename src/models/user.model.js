@@ -52,7 +52,7 @@ const userSchema = new Schema(
 
 userSchema.pre("save", async function(next) {
     if(!this.isModified("password")) return next(); //jab password field bhejenge code me tabhi hume password encrypt krna hai otherwise next() run kro or aage chalo, yahan pe humne modified lgaya hai taaki hume ye pta ho ki agar koi bhi field schema me modify hui hai other than password to password encrypt na ho.
-    this.password = bcrypt.hash(this.password, 10)
+    this.password = await bcrypt.hash(this.password, 10)
     next()
 })
 
