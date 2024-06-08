@@ -5,22 +5,6 @@ import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
 
-// const generateAccessTokenAndRefreshToken = async(userId) => {
-//     try {
-//         const user = await User.findById(userId);
-//         const accessToken = user.generateAccessToken();
-//         const refreshToken = user.generateRefreshToken();
-
-//         user.refreshToken = refreshToken;
-//         await user.save({validateBeforeSave: false})
-
-//         return {accessToken, refreshToken}
-
-//     } catch (error) {
-//         throw new ApiError(500, "Something went wrong while generating access and refresh token.");
-//     }
-// }
-
 const generateAccessTokenAndRefreshToken = async (userId) => {
     try {
         const user = await User.findById(userId);
@@ -51,15 +35,6 @@ const getUsers = asyncHandler(async(req, res) => {
 })
 
 const registerUser = asyncHandler(async (req, res) => {
-   // get user details from frontend
-   // validation - not empty
-   // check if user already exists: userName, email
-   // check for images, check for avatar
-   // upload them to cloudinary, avatar
-   // create  user object - create entry in db
-   // remove password and refresh token field from response
-   // check for user creation
-   // return res
 
    const {userName, fullName, email, password } = req.body;
 
@@ -126,14 +101,6 @@ const registerUser = asyncHandler(async (req, res) => {
 })
 
 const loginUser = asyncHandler(async (req, res) => {
-    //req body -> data
-    //userName or email
-    //find user
-    //password check
-    //access token or refresh token
-    //send cookie
-
-
     const {email, userName, password} = req.body;
 
 
@@ -364,6 +331,77 @@ const updateUserCoverImage = asyncHandler(async(req, res) => {
 
 })
 
+const getUserChannelProfile = asyncHandler(async(req, res) => {
+    const {userName} = req.params
+
+    if(!username?.trim()){
+        throw new ApiError(400, "Username is missing")
+    }
+
+    const channel = await User.aggregate([
+        {
+            $match: {
+                username: username?.toLowerCase()
+            }
+        },
+        {
+            $lookup: {
+                from: "subscriptions",
+        		localField: "_id",
+		        foreignField: "channel",
+		        as: "subscribers"
+            }
+        },
+        {
+            $lookup: {
+                from: "subscriptions",
+        		localField: "_id",
+		        foreignField: "subscriber",
+		        as: "subscribedTo"
+            }
+        },
+        {
+            $addFields: {
+                subscribersCount: {
+                    $size: "$subscribers"
+                },
+                channelSubscribedToCount: {
+                    $size: "$subscribedTo"
+                },
+                isSubscribed: {
+                    $cond: {
+                        if: { $in: [req.user?._id, "$subscribers.subscriber"]},
+                        then: true,
+                        else: false
+                    }
+                }
+            }
+        },
+        {
+            $project: {
+                fullName: 1,
+                userName: 1,
+                email: 1,
+                subscribersCount: 1,
+                channelSubscribedToCount: 1,
+                isSubscribed: 1,
+                avatar: 1,
+                coverImage: 1
+            }
+        }
+    ])
+
+    if(!channel?.length){
+        throw new ApiError(404, "Channel does not exists")
+    }
+
+    console.log(channel);
+    
+    return res
+    .status(200)
+    .json(new ApiResponse(200, channel[0], "User channel fetched successfully."))
+})
+
 export{
     registerUser,
     loginUser,
@@ -374,7 +412,8 @@ export{
     updateAccountDetails,
     getCurrentUser,
     updateUserAvatar,
-    updateUserCoverImage
+    updateUserCoverImage,
+    getUserChannelProfile
 }
 
 
